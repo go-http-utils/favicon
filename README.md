@@ -6,7 +6,9 @@ Go http middleware for serving the favicon.
 
 ## Installation
 
+```
 go get -u github.com/go-http-utils/favicon
+```
 
 ## Documentation
 
