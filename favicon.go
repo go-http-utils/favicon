@@ -11,22 +11,24 @@ import (
 )
 
 // Version is this package's version.
-const Version = "0.0.1"
+const Version = "0.1.0"
 
 // Handler wraps the http.Handler h with favicon support. `path`
 // is the path to find the favicon.
 func Handler(h http.Handler, path string) http.Handler {
 	if !os.IsPathSeparator(path[0]) {
-		if wd, err := os.Getwd(); err == nil {
-			path = filepath.Join(wd, path)
-		} else {
+		wd, err := os.Getwd()
+
+		if err != nil {
 			panic(err)
 		}
+
+		path = filepath.Join(wd, path)
 	}
 
 	stat, err := os.Stat(path)
 
-	if err != nil || stat == nil || stat.IsDir() {
+	if err != nil || stat.IsDir() {
 		panic("favicon: Invalid favicon path: " + path)
 	}
 
@@ -36,7 +38,7 @@ func Handler(h http.Handler, path string) http.Handler {
 		panic(err)
 	}
 
-	reader := bytes.NewReader(file)
+	readSeeker := bytes.NewReader(file)
 
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		if req.RequestURI != "/favicon.ico" {
@@ -46,19 +48,19 @@ func Handler(h http.Handler, path string) http.Handler {
 		}
 
 		if req.Method != http.MethodGet && req.Method != http.MethodHead {
+			res.Header().Set(headers.Allow, "GET, HEAD, OPTIONS")
+
 			if req.Method == http.MethodOptions {
 				res.WriteHeader(http.StatusOK)
 			} else {
 				res.WriteHeader(http.StatusMethodNotAllowed)
 			}
 
-			res.Header().Set(headers.Allow, "GET, HEAD, OPTIONS")
-
 			return
 		}
 
 		res.Header().Set(headers.ContentType, "image/x-icon")
 
-		http.ServeContent(res, req, "favicon.ico", stat.ModTime(), reader)
+		http.ServeContent(res, req, "favicon.ico", stat.ModTime(), readSeeker)
 	})
 }
